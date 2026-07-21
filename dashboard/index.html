@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive Netflix content analytics dashboard — explore 8,800+ titles across Movies vs TV Shows, countries, genres, ratings, and top directors with stunning visualizations.">
+  <meta name="theme-color" content="#0D0D0D">
+  <title>Netflix Analytics Dashboard | SQL Analysis + Tableau</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <div class="logo-area">
+        <h1>🎬 <span class="brand">NETFLIX</span></h1>
+      </div>
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item active" data-page="page-1">🎬 Movies vs TV Shows</li>
+          <li class="nav-item" data-page="page-2">🌎 Content by Country</li>
+          <li class="nav-item" data-page="page-3">📅 Content Over Time</li>
+          <li class="nav-item" data-page="page-4">🎭 Genre Distribution</li>
+          <li class="nav-item" data-page="page-5">⭐ Rating Distribution</li>
+          <li class="nav-item" data-page="page-6">🎥 Top Directors</li>
+        </ul>
+      </nav>
+      <div class="footer-area">
+        <p>Netflix SQL Analysis</p>
+        <p>Tableau Dashboard</p>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header>
+        <h2 id="page-title">Movies vs TV Shows</h2>
+        <p id="page-subtitle">Analysis of content type distribution and trends</p>
+      </header>
+      <section class="kpi-grid" id="kpi-container">
+        <!-- KPIs dynamically injected -->
+      </section>
+      <section class="charts-grid" id="charts-container">
+        <!-- Chart cards dynamically injected -->
+      </section>
+    </main>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
