@@ -143,6 +143,19 @@ const pages = {
       { title: 'Shortest Avg (Comedy)', value: 68, icon: '😂', suffix: ' min' }
     ],
     renderCharts: renderPage8Charts
+  },
+  'page-9': {
+    title: 'Top Movies by Genre',
+    subtitle: 'Curated picks — highest rated and most popular movies in each genre',
+    kpis: [
+      { title: 'Total Movies', value: NETFLIX_DATA.kpis.movies, icon: '🎞️' },
+      { title: 'Total Genres', value: 42, icon: '🎭' },
+      { title: 'Top Genre', value: NETFLIX_DATA.kpis.topGenre, icon: '🌍', isString: true },
+      { title: 'Dramas', value: 2950, icon: '😢' },
+      { title: 'Comedies', value: 1980, icon: '😂' },
+      { title: 'Action', value: 1020, icon: '💥' }
+    ],
+    renderCharts: renderPage9Charts
   }
 };
 
@@ -214,6 +227,9 @@ function loadPage(pageId) {
   
   const existingInsights = document.querySelector('.insights-row');
   if (existingInsights) existingInsights.remove();
+  
+  const existingTables = document.querySelector('.genre-tables-section');
+  if (existingTables) existingTables.remove();
   
   // Render KPIs
   config.kpis.forEach((kpi, index) => {
@@ -1088,3 +1104,77 @@ function renderPage8Charts() {
     options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
   }));
 }
+
+function renderPage9Charts() {
+  // Chart 1: Genre movie counts bar chart
+  const ctx1 = createChartCard('chart1', 'Movies per Genre', 'Total movie count by genre');
+  activeCharts.push(new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.genreMovieCounts.labels,
+      datasets: [{
+        label: 'Movies',
+        data: NETFLIX_DATA.genreMovieCounts.data,
+        backgroundColor: netflixPalette.slice(0, 8),
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  // Chart 2: Genre distribution doughnut
+  const ctx2 = createChartCard('chart2', 'Genre Share', 'Top 8 genres proportion');
+  activeCharts.push(new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: NETFLIX_DATA.genreMovieCounts.labels,
+      datasets: [{
+        data: NETFLIX_DATA.genreMovieCounts.data,
+        backgroundColor: netflixPalette.slice(0, 8),
+        borderWidth: 0
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  // Now add the Top Movies tables below the charts
+  const tablesSection = document.createElement('section');
+  tablesSection.className = 'genre-tables-section';
+  
+  const genres = Object.keys(NETFLIX_DATA.topMoviesByGenre);
+  let tablesHTML = '<h3 class="section-heading">🏆 Top Picks by Genre</h3><div class="genre-tables-grid">';
+  
+  genres.forEach((genre, i) => {
+    const movies = NETFLIX_DATA.topMoviesByGenre[genre];
+    const color = netflixPalette[i % netflixPalette.length];
+    tablesHTML += `
+      <div class="genre-table-card">
+        <div class="genre-table-header" style="border-left: 3px solid ${color}">
+          <h4>${genre}</h4>
+          <span class="genre-count">${NETFLIX_DATA.genreMovieCounts.data[i] || ''} movies</span>
+        </div>
+        <table class="genre-table">
+          <thead>
+            <tr><th>#</th><th>Title</th><th>Year</th><th>Country</th><th>Rating</th></tr>
+          </thead>
+          <tbody>
+            ${movies.map((m, j) => `
+              <tr>
+                <td class="rank">${j + 1}</td>
+                <td class="movie-title">${m.title}</td>
+                <td>${m.year}</td>
+                <td>${m.country}</td>
+                <td><span class="rating-badge">${m.rating}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  });
+  
+  tablesHTML += '</div>';
+  tablesSection.innerHTML = tablesHTML;
+  chartsContainer.parentNode.appendChild(tablesSection);
+}
+
