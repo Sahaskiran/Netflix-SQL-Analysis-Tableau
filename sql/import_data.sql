@@ -81,3 +81,22 @@ WITH RECURSIVE split_directors AS (
 )
 INSERT INTO directors (show_id, director)
 SELECT DISTINCT show_id, director FROM split_directors;
+
+-- Populate cast_members
+WITH RECURSIVE split_cast AS (
+    SELECT 
+        show_id,
+        TRIM(SUBSTRING_INDEX(`cast`, ',', 1)) AS cast_member,
+        SUBSTRING(`cast`, LENGTH(SUBSTRING_INDEX(`cast`, ',', 1)) + 2) AS remaining
+    FROM netflix_titles
+    WHERE `cast` IS NOT NULL AND `cast` != ''
+    UNION ALL
+    SELECT 
+        show_id,
+        TRIM(SUBSTRING_INDEX(remaining, ',', 1)),
+        IF(LOCATE(',', remaining) > 0, SUBSTRING(remaining, LENGTH(SUBSTRING_INDEX(remaining, ',', 1)) + 2), NULL)
+    FROM split_cast
+    WHERE remaining IS NOT NULL
+)
+INSERT INTO cast_members (show_id, cast_member)
+SELECT DISTINCT show_id, cast_member FROM split_cast;

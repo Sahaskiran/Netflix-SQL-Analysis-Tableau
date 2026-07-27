@@ -10,6 +10,13 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="loading-screen" class="loading-screen">
+    <div class="loader-content">
+      <div class="netflix-n">N</div>
+      <div class="loader-bar"><div class="loader-progress"></div></div>
+    </div>
+  </div>
+  <canvas id="particles-bg" class="particles-bg"></canvas>
   <div class="dashboard">
     <aside class="sidebar">
       <div class="logo-area">
@@ -17,17 +24,25 @@
       </div>
       <nav>
         <ul class="nav-list">
-          <li class="nav-item active" data-page="page-1">🎬 Movies vs TV Shows</li>
+          <li class="nav-item active" data-page="page-0">📊 Overview</li>
+          <li class="nav-item" data-page="page-1">🎬 Movies vs TV Shows</li>
           <li class="nav-item" data-page="page-2">🌎 Content by Country</li>
           <li class="nav-item" data-page="page-3">📅 Content Over Time</li>
           <li class="nav-item" data-page="page-4">🎭 Genre Distribution</li>
           <li class="nav-item" data-page="page-5">⭐ Rating Distribution</li>
           <li class="nav-item" data-page="page-6">🎥 Top Directors</li>
+          <li class="nav-item" data-page="page-7">🎭 Cast Analysis</li>
+          <li class="nav-item" data-page="page-8">⏱️ Duration Deep Dive</li>
         </ul>
       </nav>
+      <div class="theme-toggle-area">
+        <button id="theme-toggle" class="theme-toggle-btn">🌙 Dark Mode</button>
+      </div>
       <div class="footer-area">
         <p>Netflix SQL Analysis</p>
         <p>Tableau Dashboard</p>
+        <p class="footer-timestamp">Last Updated: July 2021</p>
+        <p class="footer-source">Source: Kaggle Netflix Dataset</p>
       </div>
     </aside>
     <main class="main-content">
@@ -43,7 +58,12 @@
       </section>
     </main>
   </div>
-  
+  <div id="chart-modal" class="chart-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">✕</button>
+      <canvas id="modal-chart"></canvas>
+    </div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script src="data.js"></script>

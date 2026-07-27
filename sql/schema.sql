@@ -52,3 +52,11 @@ CREATE TABLE IF NOT EXISTS directors (
     FOREIGN KEY (show_id) REFERENCES netflix_titles(show_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_directors_director ON directors(director);
+
+CREATE TABLE IF NOT EXISTS cast_members (
+    show_id VARCHAR(50),
+    cast_member VARCHAR(255),
+    FOREIGN KEY (show_id) REFERENCES netflix_titles(show_id) ON DELETE CASCADE
+);
+CREATE INDEX idx_cast_member ON cast_members(cast_member);
+

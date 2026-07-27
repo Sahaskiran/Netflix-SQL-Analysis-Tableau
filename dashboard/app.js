@@ -27,6 +27,19 @@ const chartsContainer = document.getElementById('charts-container');
 
 // Page Configs
 const pages = {
+  'page-0': {
+    title: 'Overview',
+    subtitle: 'Netflix Content Library at a Glance',
+    kpis: [
+      { title: 'Total Titles', value: NETFLIX_DATA.kpis.totalTitles, icon: '🎬' },
+      { title: 'Movies', value: NETFLIX_DATA.kpis.movies, icon: '🎞️', suffix: ` (${NETFLIX_DATA.kpis.moviePercentage}%)` },
+      { title: 'TV Shows', value: NETFLIX_DATA.kpis.tvShows, icon: '📺', suffix: ` (${NETFLIX_DATA.kpis.tvShowPercentage}%)` },
+      { title: 'Countries', value: NETFLIX_DATA.kpis.uniqueCountries, icon: '🌍' },
+      { title: 'Directors', value: NETFLIX_DATA.kpis.uniqueDirectors, icon: '🎥' },
+      { title: 'Cast Members', value: NETFLIX_DATA.insights.totalCastMembers, icon: '👥' }
+    ],
+    renderCharts: renderOverviewPage
+  },
   'page-1': {
     title: 'Movies vs TV Shows',
     subtitle: 'Analysis of content type distribution and trends',
@@ -104,16 +117,73 @@ const pages = {
       { title: 'Spielberg Titles', value: 11, icon: '🎞️' }
     ],
     renderCharts: renderPage6Charts
+  },
+  'page-7': {
+    title: 'Cast Analysis',
+    subtitle: 'Top actors and their appearances across Netflix content',
+    kpis: [
+      { title: 'Total Cast Members', value: NETFLIX_DATA.insights.totalCastMembers, icon: '👥' },
+      { title: 'Top Actor', value: NETFLIX_DATA.insights.topCastMember, icon: '⭐', isString: true },
+      { title: 'Top Actor Titles', value: 39, icon: '🎬' },
+      { title: 'Avg Cast/Title', value: NETFLIX_DATA.insights.avgCastPerTitle, icon: '📊' },
+      { title: 'Unique Directors', value: NETFLIX_DATA.kpis.uniqueDirectors, icon: '🎥' },
+      { title: 'Total Titles', value: NETFLIX_DATA.kpis.totalTitles, icon: '🎞️' }
+    ],
+    renderCharts: renderPage7Charts
+  },
+  'page-8': {
+    title: 'Duration Deep Dive',
+    subtitle: 'Content length patterns and trends',
+    kpis: [
+      { title: 'Avg Movie Duration', value: NETFLIX_DATA.kpis.avgMovieDuration, icon: '⏱️', suffix: ' min' },
+      { title: 'Avg TV Seasons', value: NETFLIX_DATA.kpis.avgTVShowDuration, icon: '📚' },
+      { title: 'Under 60 min', value: NETFLIX_DATA.durationRanges.data[0], icon: '⚡' },
+      { title: 'Over 2 Hours', value: NETFLIX_DATA.durationRanges.data[3], icon: '🎥' },
+      { title: 'Longest Avg (India)', value: 132, icon: '🇮🇳', suffix: ' min' },
+      { title: 'Shortest Avg (Comedy)', value: 68, icon: '😂', suffix: ' min' }
+    ],
+    renderCharts: renderPage8Charts
   }
 };
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
-  loadPage('page-1');
+  loadPage('page-0');
+  initParticles();
+  
+  setTimeout(() => {
+    const loader = document.getElementById('loading-screen');
+    if (loader) loader.classList.add('hidden');
+  }, 2000);
+  
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('chart-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      const isLight = document.body.classList.contains('light-theme');
+      themeBtn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+      
+      const textColor = isLight ? '#1a1a1a' : '#E5E5E5';
+      const gridColor = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+      Chart.defaults.color = textColor;
+      Chart.defaults.plugins.legend.labels.color = textColor;
+      Chart.defaults.scale.grid.color = gridColor;
+      Chart.defaults.scale.ticks.color = isLight ? '#666' : '#A3A3A3';
+      
+      const activePage = document.querySelector('.nav-item.active')?.getAttribute('data-page');
+      if (activePage) loadPage(activePage);
+    });
+  }
 });
 
 function initNavigation() {
+  const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       // Remove active class
@@ -141,6 +211,9 @@ function loadPage(pageId) {
   // Destroy old charts
   activeCharts.forEach(chart => chart.destroy());
   activeCharts = [];
+  
+  const existingInsights = document.querySelector('.insights-row');
+  if (existingInsights) existingInsights.remove();
   
   // Render KPIs
   config.kpis.forEach((kpi, index) => {
@@ -179,6 +252,10 @@ function createChartCard(id, title, subtitle) {
     <div class="chart-header">
       <div class="chart-title">${title}</div>
       <div class="chart-subtitle">${subtitle}</div>
+    </div>
+    <div class="chart-actions">
+      <button class="chart-action-btn" onclick="downloadChart('${id}', '${title}')" title="Download PNG">📥</button>
+      <button class="chart-action-btn" onclick="expandChart('${id}')" title="Fullscreen">⛶</button>
     </div>
     <div class="chart-container">
       <canvas id="${id}"></canvas>
@@ -722,5 +799,292 @@ function renderPage6Charts() {
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function downloadChart(chartId, title) {
+  const canvas = document.getElementById(chartId);
+  const link = document.createElement('a');
+  link.download = `netflix_${title.replace(/\s+/g, '_').toLowerCase()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+let modalChart = null;
+function expandChart(chartId) {
+  const sourceChart = activeCharts.find(c => c.canvas.id === chartId);
+  if (!sourceChart) return;
+  const modal = document.getElementById('chart-modal');
+  modal.classList.add('active');
+  if (modalChart) modalChart.destroy();
+  const modalCanvas = document.getElementById('modal-chart');
+  
+  modalChart = new Chart(modalCanvas, {
+    type: sourceChart.config.type,
+    data: JSON.parse(JSON.stringify(sourceChart.config.data)),
+    options: { ...JSON.parse(JSON.stringify(sourceChart.config.options)), maintainAspectRatio: false, responsive: true }
+  });
+}
+
+function closeModal() {
+  document.getElementById('chart-modal').classList.remove('active');
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+}
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('chart-modal');
+  if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+    closeModal();
+    return;
+  }
+  const currentNavItems = document.querySelectorAll('.nav-item');
+  const activeIndex = [...currentNavItems].findIndex(n => n.classList.contains('active'));
+  if (e.key === 'ArrowDown' && activeIndex < currentNavItems.length - 1) {
+    currentNavItems[activeIndex + 1].click();
+  } else if (e.key === 'ArrowUp' && activeIndex > 0) {
+    currentNavItems[activeIndex - 1].click();
+  }
+});
+
+function initParticles() {
+  const canvas = document.getElementById('particles-bg');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const particles = [];
+  for (let i = 0; i < 50; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.15 + 0.05
+    });
+  }
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(229, 9, 20, ${p.alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+  window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+}
+
+function renderOverviewPage() {
+  const ctx1 = createChartCard('chart1', 'Content Distribution', 'Movies vs TV Shows');
+  activeCharts.push(new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: NETFLIX_DATA.typeSplit.labels,
+      datasets: [{ data: NETFLIX_DATA.typeSplit.data, backgroundColor: ['#E50914', '#4ECDC4'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  const ctx2 = createChartCard('chart2', 'Library Growth', 'Cumulative titles added over time');
+  activeCharts.push(new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: NETFLIX_DATA.yearlyGrowth.years,
+      datasets: [{
+        label: 'Total Titles',
+        data: NETFLIX_DATA.yearlyGrowth.cumulative,
+        borderColor: '#E50914',
+        backgroundColor: 'rgba(229, 9, 20, 0.2)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  const ctx3 = createChartCard('chart3', 'Top 5 Countries', 'Total titles by country');
+  activeCharts.push(new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.topCountries.labels.slice(0, 5),
+      datasets: [{
+        label: 'Titles',
+        data: NETFLIX_DATA.topCountries.data.slice(0, 5),
+        backgroundColor: netflixPalette.slice(0, 5),
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  const ctx4 = createChartCard('chart4', 'Top 5 Genres', 'Most popular categories');
+  activeCharts.push(new Chart(ctx4, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.topGenres.labels.slice(0, 5),
+      datasets: [{
+        label: 'Titles',
+        data: NETFLIX_DATA.topGenres.data.slice(0, 5),
+        backgroundColor: netflixPalette.slice(0, 5),
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  const insightsSection = document.createElement('section');
+  insightsSection.className = 'insights-row';
+  insightsSection.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-icon">🚀</div>
+      <div class="insight-text"><h4>Peak Content Year</h4><p>${NETFLIX_DATA.insights.contentAddedPeak}</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📜</div>
+      <div class="insight-text"><h4>Oldest Title</h4><p>${NETFLIX_DATA.insights.oldestTitle}</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📊</div>
+      <div class="insight-text"><h4>Avg Titles/Year</h4><p>${NETFLIX_DATA.insights.avgTitlesPerYear}</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📈</div>
+      <div class="insight-text"><h4>Content Since 2015</h4><p>${NETFLIX_DATA.insights.contentSince2015}%</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">⭐</div>
+      <div class="insight-text"><h4>Top Cast Member</h4><p>${NETFLIX_DATA.insights.topCastMember}</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">👥</div>
+      <div class="insight-text"><h4>Avg Cast per Title</h4><p>${NETFLIX_DATA.insights.avgCastPerTitle}</p></div>
+    </div>
+  `;
+  chartsContainer.parentNode.appendChild(insightsSection);
+}
+
+function renderPage7Charts() {
+  const ctx1 = createChartCard('chart1', 'Top 10 Actors', 'Most appearances on Netflix');
+  activeCharts.push(new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.topCast.labels.slice(0, 10),
+      datasets: [{
+        label: 'Appearances',
+        data: NETFLIX_DATA.topCast.data.slice(0, 10),
+        backgroundColor: netflixPalette.slice(0, 10),
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  const ctx2 = createChartCard('chart2', 'Actor Versatility', 'Number of genres covered');
+  activeCharts.push(new Chart(ctx2, {
+    type: 'radar',
+    data: {
+      labels: NETFLIX_DATA.actorVersatility.labels.slice(0, 6),
+      datasets: [{
+        label: 'Genres Covered',
+        data: NETFLIX_DATA.actorVersatility.genreCount.slice(0, 6),
+        backgroundColor: 'rgba(229, 9, 20, 0.2)',
+        borderColor: '#E50914',
+        pointBackgroundColor: '#E50914'
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' } } } }
+  }));
+
+  const ctx3 = createChartCard('chart3', 'Top Frequent Actor Pairs', 'Collaborations');
+  activeCharts.push(new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.actorPairs.labels.slice(0, 5),
+      datasets: [{
+        label: 'Collaborations',
+        data: NETFLIX_DATA.actorPairs.data.slice(0, 5),
+        backgroundColor: '#4ECDC4',
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  const ctx4 = createChartCard('chart4', 'Cast by Type', 'Movies vs TV Shows for Top Actors');
+  activeCharts.push(new Chart(ctx4, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.castByType.labels.slice(0, 5),
+      datasets: [
+        { label: 'Movies', data: NETFLIX_DATA.castByType.movies.slice(0, 5), backgroundColor: '#E50914', borderRadius: 4 },
+        { label: 'TV Shows', data: NETFLIX_DATA.castByType.tvShows.slice(0, 5), backgroundColor: '#4ECDC4', borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderPage8Charts() {
+  const ctx1 = createChartCard('chart1', 'Duration Ranges', 'Movie lengths distribution');
+  activeCharts.push(new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: NETFLIX_DATA.durationRanges.labels,
+      datasets: [{ data: NETFLIX_DATA.durationRanges.data, backgroundColor: netflixPalette.slice(0, 4), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  const ctx2 = createChartCard('chart2', 'Average Duration Trend', 'Movie length by release year');
+  activeCharts.push(new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: NETFLIX_DATA.avgDurationByYear.years,
+      datasets: [{
+        label: 'Avg Minutes',
+        data: NETFLIX_DATA.avgDurationByYear.avgMinutes,
+        borderColor: '#E50914',
+        backgroundColor: 'rgba(229, 9, 20, 0.2)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  const ctx3 = createChartCard('chart3', 'Duration by Genre', 'Avg movie length for top genres');
+  activeCharts.push(new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.durationByGenre.labels.slice(0, 5),
+      datasets: [{
+        label: 'Minutes',
+        data: NETFLIX_DATA.durationByGenre.avgMinutes.slice(0, 5),
+        backgroundColor: '#4ECDC4',
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  }));
+
+  const ctx4 = createChartCard('chart4', 'Duration by Country', 'Avg movie length by origin');
+  activeCharts.push(new Chart(ctx4, {
+    type: 'bar',
+    data: {
+      labels: NETFLIX_DATA.durationByCountry.labels.slice(0, 5),
+      datasets: [{
+        label: 'Minutes',
+        data: NETFLIX_DATA.durationByCountry.avgMinutes.slice(0, 5),
+        backgroundColor: netflixPalette[2],
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
   }));
 }
