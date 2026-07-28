@@ -1,7 +1,10 @@
 /*
  * File: import_data.sql
  * Description: Data import instructions and data cleaning queries.
+
  * Populates main table and extracts normalized data.
+
+
  * Author context: Generated for Netflix SQL Analysis project.
  */
 
